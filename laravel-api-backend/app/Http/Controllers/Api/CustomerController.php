@@ -46,20 +46,28 @@ class CustomerController extends Controller
      */
     public function store(Request $request)
     {
-        $validatedData = $request->validate([
-            'name' => 'required|string|max:255',
-            'reference' => 'required|string|unique:customers',
-            'customer_category_id' => 'required|exists:customer_categories,id',
-            'start_date' => 'nullable|date',
-            'description' => 'nullable|string',
-        ]);
-
-        $customer = Customer::create($validatedData);
-
-        return response()->json([
-            'message' => 'Customer created successfully',
-            'data' => $customer,
-        ], 201);
+        try {
+            $validatedData = $request->validate([
+                'name' => 'required|string|max:255',
+                'reference' => 'required|string|unique:customers',
+                'customer_category_id' => 'required|exists:customer_categories,id',
+                'start_date' => 'nullable|date',
+                'description' => 'nullable|string',
+            ]);
+    
+            $customer = Customer::create($validatedData);
+    
+            return response()->json([
+                'message' => 'Customer created successfully',
+                'data' => $customer,
+            ], 201);
+    
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        }
     }
 
     /**

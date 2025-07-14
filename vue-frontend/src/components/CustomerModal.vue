@@ -1,11 +1,19 @@
 <template>
-    <div class="modal-overlay">
-      <div class="modal-container">
+    <div class="modal-overlay" @click.self="$emit('close')">
+      <div class="modal-container" @click.stop>
         <h2 class="modal-title">
           {{ customer ? 'Edit Customer' : 'Create Customer' }}
         </h2>
   
         <form @submit.prevent="saveCustomer" class="customer-form">
+          <!-- Add error display section -->
+          <div v-if="errors" class="error-messages">
+            <p v-for="(errorArray, field) in errors" 
+              :key="field" 
+              class="error-message">
+              {{ errorArray[0] }}
+            </p>
+          </div>
           <!-- General Information -->
           <div class="form-section">
             <h3 class="section-title">General</h3>
@@ -90,13 +98,13 @@
                     <td>{{ contact.last_name }}</td>
                     <td>
                       <button 
-                        @click="editContact(contact)" 
+                        @click="(e) => editContact(contact, e)" 
                         class="btn-link btn-edit"
                       >
                         Edit
                       </button>
                       <button 
-                        @click="deleteContact(contact)" 
+                        @click="(e) => deleteContact(contact, e)" 
                         class="btn-link btn-delete"
                       >
                         Delete
@@ -137,6 +145,7 @@
           :customer-id="customer?.id"
           @close="closeContactModal"
           @save="handleContactSave"
+          
         />
   
         <!-- Delete Contact Confirmation -->
@@ -146,6 +155,7 @@
           item-type="contact"
           @confirm="confirmContactDelete"
           @cancel="cancelContactDelete"
+          
         />
       </div>
     </div>
@@ -181,7 +191,8 @@
         showContactDeleteModal: false,
         selectedContact: null,
         contactToDelete: null,
-        saving: false
+        saving: false,
+        errors: null
       }
     },
     mounted() {
@@ -194,6 +205,7 @@
     methods: {
       async saveCustomer() {
         this.saving = true
+        this.errors = null //clear previous errors
         try {
           if (this.customer) {
             await customerService.update(this.customer.id, this.form)
@@ -202,7 +214,11 @@
           }
           this.$emit('save')
         } catch (error) {
-          console.error('Error saving customer:', error)
+          if (error.response?.status === 422) {
+            this.errors = error.response.data.errors || {}
+          } else {
+            console.error('Error saving customer:', error)
+          }
         } finally {
           this.saving = false
         }
@@ -213,16 +229,22 @@
         this.showContactModal = true
       },
   
-      editContact(contact) {
-        this.selectedContact = contact
-        this.showContactModal = true
+      editContact(contact, event) {
+        if (event) {
+          event.preventDefault();
+          event.stopPropagation();
+        }        
+        this.selectedContact = { ...contact };
+        this.showContactModal = true;
       },
   
+       
       closeContactModal() {
-        this.showContactModal = false
-        this.selectedContact = null
+        this.showContactModal = false;
+        setTimeout(() => {
+          this.selectedContact = null;
+        }, 100);
       },
-  
       async handleContactSave() {
         this.closeContactModal()
         if (this.customer) {
@@ -231,8 +253,12 @@
         }
       },
   
-      deleteContact(contact) {
-        this.contactToDelete = contact
+      deleteContact(contact, event) {
+        if (event) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        this.contactToDelete = { ...contact };
         this.showContactDeleteModal = true
       },
   
@@ -248,8 +274,10 @@
       },
   
       cancelContactDelete() {
-        this.showContactDeleteModal = false
-        this.contactToDelete = null
+        this.showContactDeleteModal = false;
+        setTimeout(() => {
+          this.contactToDelete = null;
+        }, 100);
       }
     }
   }
@@ -278,6 +306,16 @@
     max-height: 90vh;
     overflow-y: auto;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    z-index: 1001;
+  }
+
+  /* Add styles for nested modals */
+  .modal-container :deep(.modal-overlay) {
+    z-index: 1002;
+  }
+
+  .modal-container :deep(.modal-container) {
+    z-index: 1003;
   }
   
   .modal-title {
@@ -481,6 +519,21 @@
     text-decoration: underline;
   }
   
+  /* Move error styles outside media query */
+  .error-messages {
+    background-color: #fee2e2;
+    border: 1px solid #ef4444;
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 16px;
+  }
+
+  .error-message {
+    color: #dc2626;
+    font-size: 14px;
+    margin: 4px 0;
+  }
+
   @media (max-width: 768px) {
     .modal-container {
       width: 95%;
@@ -502,4 +555,3 @@
     }
   }
 </style>
-  
