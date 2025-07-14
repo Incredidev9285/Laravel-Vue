@@ -13,7 +13,7 @@ class CustomerCategoryController extends Controller
      */
     public function index()
     {
-        $categories = CustomerCategory::orderBy('name')->get();
+        $categories = CustomerCategory::all();
 
         return response()->json([
             'message' => 'Customer categories retrieved successfully',

@@ -13,6 +13,7 @@ class CustomerController extends Controller
      */
     public function index(Request $request)
     {
+        
         $query = Customer::with(['category', 'contacts']);
 
         // Plain text search
@@ -26,6 +27,11 @@ class CustomerController extends Controller
                         ->orWhere('last_name', 'like', "%{$search}%");
                   });
             });
+        }
+
+        // Cetegory filter functionality
+        if ($request->has('category_id') && $request->category_id != '') {
+            $query->where('customer_category_id', $request->category_id);
         }
 
         return response()->json([
@@ -91,12 +97,23 @@ class CustomerController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    
+    public function destroy(Customer $customer)
     {
-        $customer->delete();
-
-        return response()->json([
-            'message' => 'Customer deleted successfully',
-        ]);
+        try {
+            $customer->delete();
+            
+            return response()->json([
+                'message' => 'Customer deleted successfully'
+            ], 200);
+        } catch (\Exception $e) {
+            \Log::error('Error deleting customer: ' . $e->getMessage());
+            
+            return response()->json([
+                'message' => 'Error deleting customer',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
+
 }

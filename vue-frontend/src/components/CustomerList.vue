@@ -146,7 +146,9 @@
         try {
           const params = {}
           if (this.searchText) params.search = this.searchText
-          if (this.categoryFilter) params.category = this.categoryFilter
+          if (this.categoryFilter) params.category_id = this.categoryFilter
+          
+          console.log('Sending filter parameters:', params)
           
           const response = await customerService.getAll(params)
           this.customers = response.data.data
@@ -188,6 +190,7 @@
   
       async confirmDelete() {
         try {
+          console.log('Deleting customer:', this.customerToDelete.id)
           await customerService.delete(this.customerToDelete.id)
           this.showDeleteModal = false
           this.customerToDelete = null
