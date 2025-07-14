@@ -1,5 +1,5 @@
 <template>
-    <div class="modal-overlay" @click.self="$emit('close')">
+    <div class="modal-overlay" @click.self="$emit('close')" @mousedown="handleOverlayMouseDown" @click="handleOverlayClick">
       <div class="modal-container" @click.stop>
         <h2 class="modal-title">
           {{ customer ? 'Edit Customer' : 'Create Customer' }}
@@ -7,13 +7,13 @@
   
         <form @submit.prevent="saveCustomer" class="customer-form">
           <!-- Add error display section -->
-          <div v-if="errors" class="error-messages">
+          <!-- <div v-if="errors" class="error-messages">
             <p v-for="(errorArray, field) in errors" 
               :key="field" 
               class="error-message">
               {{ errorArray[0] }}
             </p>
-          </div>
+          </div> -->
           <!-- General Information -->
           <div class="form-section">
             <h3 class="section-title">General</h3>
@@ -21,32 +21,75 @@
             <div class="form-grid">
               <div class="form-group">
                 <label class="form-label">Name *</label>
+                <!-- <input 
+                  v-model="form.name"
+                  type="text" 
+                  required
+                  class="form-input"
+                > -->
                 <input 
                   v-model="form.name"
                   type="text" 
                   required
                   class="form-input"
+                  :class="{ 'input-error': nameErrors.length > 0 }"
+                  @blur="validateName"
+                  @input="clearNameErrors"
+                  placeholder="e.g. John Smith or ABC Corporation"
                 >
+                <div v-if="nameErrors.length > 0" class="field-errors">
+                  <small v-for="error in nameErrors" :key="error" class="error-text">
+                    {{ error }}
+                  </small>
+                </div>
+                <small class="field-hint">
+                  Letters, spaces, hyphens, apostrophes, and periods only. 2-100 characters.
+                </small>
               </div>
               
               <div class="form-group">
                 <label class="form-label">Reference *</label>
+                <!-- <input 
+                  v-model="form.reference"
+                  type="text" 
+                  required
+                  class="form-input"
+                > -->
                 <input 
                   v-model="form.reference"
                   type="text" 
                   required
                   class="form-input"
+                  :class="{ 'input-error': referenceErrors.length > 0 }"
+                  @blur="validateReference"
+                  @input="clearReferenceErrors"
+                  placeholder="e.g. CUST-001 or ABC123"
+                  style="text-transform: uppercase;"
                 >
+                <div v-if="referenceErrors.length > 0" class="field-errors">
+                  <small v-for="(error, index) in referenceErrors" :key="index" class="error-text">
+                    {{ error }}
+                  </small>
+                </div>
+                <small class="field-hint">
+                  Uppercase letters, numbers, and hyphens only. 3-20 characters. Must be unique.
+                </small>
               </div>
               
               <div class="form-group">
                 <label class="form-label">Category *</label>
-                <select v-model="form.customer_category_id" required class="form-select">
+                <select v-model="form.customer_category_id" required class="form-select" :class="{ 'input-error': categoryErrors.length > 0 }"
+                  @change="clearCategoryErrors">
                   <option value="">Select Category</option>
                   <option v-for="category in categories" :key="category.id" :value="category.id">
                     {{ category.name }}
                   </option>
                 </select>
+                <div v-if="categoryErrors.length > 0" class="field-errors">
+                  <small v-for="(error, index) in categoryErrors" :key="index" class="error-text">
+                    {{ error }}
+                  </small>
+                </div>
               </div>
               
               <div class="form-group">
@@ -62,11 +105,30 @@
             
             <div class="form-group">
               <label class="form-label">Description</label>
+              <!-- <textarea 
+                v-model="form.description"
+                rows="3"
+                class="form-textarea"
+                maxlength="500"
+                placeholder="Optional description (max 500 characters)"
+              ></textarea> -->
               <textarea 
                 v-model="form.description"
                 rows="3"
                 class="form-textarea"
+                :class="{ 'input-error': descriptionErrors.length > 0 }"
+                maxlength="500"
+                placeholder="Optional description (max 500 characters)"
+                @input="clearDescriptionErrors"
               ></textarea>
+              <div v-if="descriptionErrors.length > 0" class="field-errors">
+                <small v-for="(error, index) in descriptionErrors" :key="index" class="error-text">
+                  {{ error }}
+                </small>
+              </div>
+              <small class="field-hint">
+                {{ form.description ? form.description.length : 0 }}/500 characters
+              </small>
             </div>
           </div>
   
@@ -192,20 +254,169 @@
         selectedContact: null,
         contactToDelete: null,
         saving: false,
-        errors: null
+        customerDataChanged: false,
+        textSelectionActive: false,
+        nameErrors: [],
+        referenceErrors: [],
+        categoryErrors: [],
+        startDateErrors: [],
+        descriptionErrors: []
       }
     },
+    computed: {
+      isFormValid() {
+        return this.form.name && 
+              this.form.reference && 
+              this.form.category_id && 
+              this.form.start_date &&
+              this.nameErrors.length === 0 &&
+              this.referenceErrors.length === 0 &&
+              this.categoryErrors.length === 0 &&
+             this.startDateErrors.length === 0 &&
+             this.descriptionErrors.length === 0
+      }
+    },
+
+    beforeUnmount() {
+      // Clean up event listener
+      document.removeEventListener('selectionchange', this.handleTextSelection)
+    },
+    
     mounted() {
       if (this.customer) {
         this.form = { ...this.customer }
         this.form.start_date = this.customer.start_date?.split('T')[0]
         this.contacts = this.customer.contacts || []
       }
+
+      // Listen for selection changes
+      document.addEventListener('selectionchange', this.handleTextSelection)
     },
     methods: {
+      handleOverlayMouseDown(event) {
+        // Only track mousedown if it's directly on the overlay (not on modal content)
+        if (event.target === event.currentTarget) {
+          this.mouseDownOnOverlay = true
+          this.textSelectionActive = false
+        } else {
+          this.mouseDownOnOverlay = false
+        }
+      },
+
+      handleOverlayClick(event) {
+        // Only close modal if:
+        // 1. Click is directly on overlay (not bubbled from content)
+        // 2. Mouse was pressed down on overlay (not dragged from content)
+        // 3. No text selection is active
+        if (event.target === event.currentTarget && 
+            this.mouseDownOnOverlay && 
+            !this.textSelectionActive) {
+          this.$emit('close')
+        }
+        
+        // Reset tracking
+        this.mouseDownOnOverlay = false
+      },
+
+      // Track text selection activity
+      handleTextSelection() {
+        const selection = window.getSelection()
+        this.textSelectionActive = selection.toString().length > 0
+      },
+      clearAllErrors() {
+        this.nameErrors = []
+        this.referenceErrors = []
+        this.categoryErrors = []
+        this.startDateErrors = []
+        this.descriptionErrors = []
+      },
+      validateDescription() {
+        this.descriptionErrors = []
+        if (this.form.description && this.form.description.length > 500) {
+          this.descriptionErrors.push('Description cannot exceed 500 characters')
+        }
+      },
+      validateName() {
+        this.nameErrors = []
+        const name = this.form.name?.trim()
+        
+        if (!name) {
+          this.nameErrors.push('Customer name is required')
+          return
+        }
+        
+        if (name.length < 2) {
+          this.nameErrors.push('Name must be at least 2 characters')
+        }
+        
+        if (name.length > 100) {
+          this.nameErrors.push('Name cannot exceed 100 characters')
+        }
+        
+        if (!/^[A-Za-z\s\-'.]+$/u.test(name)) {
+          this.nameErrors.push('Name can only contain letters, spaces, hyphens, apostrophes, and periods')
+        }
+        
+        if (/^\s|\s$/.test(name)) {
+          this.nameErrors.push('Name cannot start or end with spaces')
+        }
+        
+        if (/\s{2,}/.test(name)) {
+          this.nameErrors.push('Name cannot contain consecutive spaces')
+        }
+        
+        if (/[-'.]{2,}/.test(name)) {
+          this.nameErrors.push('Name cannot contain consecutive special characters')
+        }
+      },
+
+      validateReference() {
+        this.referenceErrors = []
+        const reference = this.form.reference?.trim().toUpperCase()
+        
+        if (!reference) {
+          this.referenceErrors.push('Customer reference is required')
+          return
+        }
+        
+        if (reference.length < 3) {
+          this.referenceErrors.push('Reference must be at least 3 characters')
+        }
+        
+        if (reference.length > 20) {
+          this.referenceErrors.push('Reference cannot exceed 20 characters')
+        }
+        
+        if (!/^[A-Z0-9-]+$/.test(reference)) {
+          this.referenceErrors.push('Reference can only contain uppercase letters, numbers, and hyphens')
+        }
+        
+        // Update form with uppercase version
+        this.form.reference = reference.toUpperCase()
+      },
+
+      clearNameErrors() {
+        this.nameErrors = []
+      },
+
+      clearReferenceErrors() {
+        this.referenceErrors = []
+      },
+
+      clearCategoryErrors() { this.categoryErrors = [] },
+      clearStartDateErrors() { this.startDateErrors = [] },
+      clearDescriptionErrors() { this.descriptionErrors = [] },
+
       async saveCustomer() {
+        // Clear all previous errors
+        this.clearAllErrors()
+        // Validate before submission
+        this.validateName()
+        this.validateReference()
+        this.validateDescription()
         this.saving = true
-        this.errors = null //clear previous errors
+        console.log('Saving customer:', this.form);
+        
         try {
           if (this.customer) {
             await customerService.update(this.customer.id, this.form)
@@ -213,9 +424,17 @@
             await customerService.create(this.form)
           }
           this.$emit('save')
+          this.$emit('close')
         } catch (error) {
           if (error.response?.status === 422) {
-            this.errors = error.response.data.errors || {}
+            const errors = error.response.data.errors
+          
+            // Map backend errors to component error arrays
+            this.nameErrors = errors.name || []
+            this.referenceErrors = errors.reference || []
+            // this.categoryErrors = errors.category_id || []
+            // this.startDateErrors = errors.start_date || []
+            this.descriptionErrors = errors.description || []
           } else {
             console.error('Error saving customer:', error)
           }
@@ -250,6 +469,9 @@
         if (this.customer) {
           const response = await customerService.getById(this.customer.id)
           this.contacts = response.data.data.contacts
+
+          // Mark that customer data has changed
+          this.customerDataChanged = true
         }
       },
   
@@ -268,6 +490,9 @@
           this.contacts = this.contacts.filter(c => c.id !== this.contactToDelete.id)
           this.showContactDeleteModal = false
           this.contactToDelete = null
+
+          // Mark that customer data has changed
+          this.customerDataChanged = true
         } catch (error) {
           console.error('Error deleting contact:', error)
         }
@@ -284,6 +509,40 @@
   </script>
   
   <style scoped>
+  .form-input.error,
+  .form-select.error,
+  .form-textarea.error {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25);
+  }
+
+  .field-errors {
+    margin-top: 5px;
+  }
+
+  .input-error {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25) !important;
+  }
+
+  .error-text {
+    color: #dc3545;
+    font-size: 12px;
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .field-hint {
+    color: #6c757d;
+    font-size: 12px;
+    margin-top: 3px;
+    display: block;
+  }
+
+  .btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
   .modal-overlay {
     position: fixed;
     top: 0;
@@ -520,7 +779,7 @@
   }
   
   /* Move error styles outside media query */
-  .error-messages {
+  /* .error-messages {
     background-color: #fee2e2;
     border: 1px solid #ef4444;
     border-radius: 4px;
@@ -532,7 +791,7 @@
     color: #dc2626;
     font-size: 14px;
     margin: 4px 0;
-  }
+  } */
 
   @media (max-width: 768px) {
     .modal-container {

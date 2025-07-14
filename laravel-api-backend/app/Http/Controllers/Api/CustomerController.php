@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Models\Customer;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class CustomerController extends Controller
 {
@@ -46,28 +47,81 @@ class CustomerController extends Controller
      */
     public function store(Request $request)
     {
-        try {
-            $validatedData = $request->validate([
-                'name' => 'required|string|max:255',
-                'reference' => 'required|string|unique:customers',
-                'customer_category_id' => 'required|exists:customer_categories,id',
-                'start_date' => 'nullable|date',
-                'description' => 'nullable|string',
-            ]);
+        // try {
+        //     $validatedData = $request->validate([
+        //         'name' => 'required|string|max:255',
+        //         'reference' => 'required|string|unique:customers',
+        //         'customer_category_id' => 'required|exists:customer_categories,id',
+        //         'start_date' => 'nullable|date',
+        //         'description' => 'nullable|string',
+        //     ]);
     
-            $customer = Customer::create($validatedData);
+        //     $customer = Customer::create($validatedData);
     
-            return response()->json([
-                'message' => 'Customer created successfully',
-                'data' => $customer,
-            ], 201);
+        //     return response()->json([
+        //         'message' => 'Customer created successfully',
+        //         'data' => $customer,
+        //     ], 201);
     
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'message' => 'Validation failed',
-                'errors' => $e->errors()
-            ], 422);
-        }
+        // } catch (\Illuminate\Validation\ValidationException $e) {
+        //     return response()->json([
+        //         'message' => 'Validation failed',
+        //         'errors' => $e->errors()
+        //     ], 422);
+        // }
+        $validated = $request->validate([
+            'name' => [
+                'required',
+                'string',
+                'min:2',
+                'max:100',
+                'regex:/^[\pL\s\-\'\.]+$/u',        // Unicode letters, spaces, hyphens, apostrophes, dots
+                'not_regex:/^\s/',                   // Cannot start with space
+                'not_regex:/\s$/',                   // Cannot end with space
+                'not_regex:/\s{2,}/',               // No consecutive spaces
+                'not_regex:/[\-\'\.]{2,}/',         // No consecutive special characters
+            ],
+            'reference' => [
+                'required',
+                'string',
+                'min:3',
+                'max:20',
+                'regex:/^[A-Z0-9\-]+$/',           // Uppercase letters, numbers, hyphens only
+                'unique:customers,reference',       // Must be unique
+            ],
+            'customer_category_id' => 'required|exists:customer_categories,id',
+            'start_date' => 'required|date',
+            'description' => 'nullable|string|max:500'
+        ], [
+            // Custom error messages
+            'name.required' => 'Customer name is required.',
+            'name.min' => 'Customer name must be at least 2 characters.',
+            'name.max' => 'Customer name cannot exceed 100 characters.',
+            'name.regex' => 'Customer name can only contain letters, spaces, hyphens, apostrophes, and periods.',
+            'name.not_regex' => 'Customer name format is invalid. Please remove leading/trailing spaces or consecutive spaces.',
+            
+            'reference.required' => 'Customer reference is required.',
+            'reference.min' => 'Customer reference must be at least 3 characters.',
+            'reference.max' => 'Customer reference cannot exceed 20 characters.',
+            'reference.regex' => 'Customer reference can only contain uppercase letters, numbers, and hyphens.',
+            'reference.unique' => 'This customer reference already exists. Please choose a different one.',
+            
+            'customer_category_id.required' => 'Customer category is required.',
+            'customer_category_id.exists' => 'Selected category is invalid.',
+            'start_date.required' => 'Start date is required.',
+            'start_date.date' => 'Start date must be a valid date.',
+        ]);
+
+        // Auto-format the data before saving
+        $validated['name'] = $this->formatCustomerName($validated['name']);
+        $validated['reference'] = strtoupper(trim($validated['reference']));
+
+        $customer = Customer::create($validated);
+        
+        return response()->json([
+            'message' => 'Customer created successfully',
+            'data' => $customer->load(['category', 'contacts'])
+        ], 201);
     }
 
     /**
@@ -86,19 +140,67 @@ class CustomerController extends Controller
      */
     public function update(Request $request, Customer $customer)
     {
-        $validatedData = $request->validate([
-            'name' => 'sometimes|required|string|max:255',
-            'reference' => 'sometimes|required|string|unique:customers,reference,' . $customer->id,
+        // $validatedData = $request->validate([
+        //     'name' => 'sometimes|required|string|max:255',
+        //     'reference' => 'sometimes|required|string|unique:customers,reference,' . $customer->id,
+        //     'customer_category_id' => 'sometimes|required|exists:customer_categories,id',
+        //     'start_date' => 'nullable|date',
+        //     'description' => 'nullable|string',
+        // ]);
+
+        // $customer->update($validatedData);
+
+        // return response()->json([
+        //     'message' => 'Customer updated successfully',
+        //     'data' => $customer,
+        // ]);
+        $validated = $request->validate([
+            'name' => [
+                'required',
+                'string',
+                'min:2',
+                'max:100',
+                'regex:/^[\pL\s\-\'\.]+$/u',
+                'not_regex:/^\s/',
+                'not_regex:/\s$/',
+                'not_regex:/\s{2,}/',
+                'not_regex:/[\-\'\.]{2,}/',
+            ],
+            'reference' => [
+                'required',
+                'string',
+                'min:3',
+                'max:20',
+                'regex:/^[A-Z0-9\-]+$/',
+                Rule::unique('customers')->ignore($customer->id),
+            ],
             'customer_category_id' => 'sometimes|required|exists:customer_categories,id',
-            'start_date' => 'nullable|date',
-            'description' => 'nullable|string',
+            'start_date' => 'required|date',
+            'description' => 'nullable|string|max:500'
+        ], [
+            // Same custom error messages as above
+            'name.required' => 'Customer name is required.',
+            'name.min' => 'Customer name must be at least 2 characters.',
+            'name.max' => 'Customer name cannot exceed 100 characters.',
+            'name.regex' => 'Customer name can only contain letters, spaces, hyphens, apostrophes, and periods.',
+            'name.not_regex' => 'Customer name format is invalid.',
+            
+            'reference.required' => 'Customer reference is required.',
+            'reference.min' => 'Customer reference must be at least 3 characters.',
+            'reference.max' => 'Customer reference cannot exceed 20 characters.',
+            'reference.regex' => 'Customer reference can only contain uppercase letters, numbers, and hyphens.',
+            'reference.unique' => 'This customer reference already exists. Please choose a different one.',
         ]);
 
-        $customer->update($validatedData);
+        // Auto-format the data before updating
+        $validated['name'] = $this->formatCustomerName($validated['name']);
+        $validated['reference'] = strtoupper(trim($validated['reference']));
 
+        $customer->update($validated);
+        
         return response()->json([
             'message' => 'Customer updated successfully',
-            'data' => $customer,
+            'data' => $customer->load(['category', 'contacts'])
         ]);
     }
     
@@ -124,4 +226,12 @@ class CustomerController extends Controller
         }
     }
 
+    private function formatCustomerName($name)
+    {
+        // Remove leading/trailing spaces and ensure no consecutive spaces
+        $name = preg_replace('/\s+/', ' ', trim($name));
+        
+        // Capitalize the first letter of each word
+        return ucwords(strtolower($name));
+    }
 }

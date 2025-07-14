@@ -173,9 +173,12 @@
         this.showModal = true
       },
   
-      closeModal() {
+      async closeModal() {
         this.showModal = false
         this.selectedCustomer = null
+
+        // Always refresh the list when modal closes
+        await this.loadCustomers()
       },
   
       async handleSave() {
