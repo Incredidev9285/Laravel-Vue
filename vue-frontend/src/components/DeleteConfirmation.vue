@@ -1,6 +1,6 @@
 <template>
-    <div class="modal-overlay">
-      <div class="modal-container">
+    <div class="modal-overlay" @click.self="$emit('cancel')">
+      <div class="modal-container" @click.stop>
         <!-- Modal Header -->
         <div class="modal-header">
           <h2 class="modal-title">Confirm Delete</h2>
@@ -80,7 +80,8 @@
         }
         return ''
       }
-    }
+    },
+    emits: ['confirm', 'cancel'] // Ensure emits are properly declared
   }
   </script>
   
