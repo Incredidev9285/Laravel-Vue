@@ -1,0 +1,47 @@
+/laravel-api-backend/.phpunit.cache
+/laravel-api-backend/node_modules
+/laravel-api-backend/public/build
+/laravel-api-backend/public/hot
+/laravel-api-backend/public/storage
+/laravel-api-backend/storage/*.key
+/laravel-api-backend/storage/pail
+/laravel-api-backend/vendor
+/laravel-api-backend/.env
+/laravel-api-backend/.env.backup
+/laravel-api-backend/.env.production
+/laravel-api-backend/.phpactor.json
+/laravel-api-backend/.phpunit.result.cache
+/laravel-api-backend/Homestead.json
+/laravel-api-backend/Homestead.yaml
+/laravel-api-backend/npm-debug.log
+/laravel-api-backend/yarn-error.log
+/laravel-api-backend/auth.json
+/laravel-api-backend/.fleet
+/laravel-api-backend/.idea
+/laravel-api-backend/.nova
+/laravel-api-backend/.vscode
+/laravel-api-backend/.zed
+
+.DS_Store
+/vue-frontend/node_modules
+/vue-frontend/dist
+
+
+# local env files
+/vue-frontend/.env.local
+/vue-frontend/.env.*.local
+
+# Log files
+/vue-frontend/npm-debug.log*
+/vue-frontend/yarn-debug.log*
+/vue-frontend/yarn-error.log*
+/vue-frontend/pnpm-debug.log*
+
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
