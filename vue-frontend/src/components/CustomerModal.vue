@@ -6,14 +6,7 @@
         </h2>
   
         <form @submit.prevent="saveCustomer" class="customer-form">
-          <!-- Add error display section -->
-          <!-- <div v-if="errors" class="error-messages">
-            <p v-for="(errorArray, field) in errors" 
-              :key="field" 
-              class="error-message">
-              {{ errorArray[0] }}
-            </p>
-          </div> -->
+          
           <!-- General Information -->
           <div class="form-section">
             <h3 class="section-title">General</h3>
@@ -21,12 +14,7 @@
             <div class="form-grid">
               <div class="form-group">
                 <label class="form-label">Name *</label>
-                <!-- <input 
-                  v-model="form.name"
-                  type="text" 
-                  required
-                  class="form-input"
-                > -->
+                
                 <input 
                   v-model="form.name"
                   type="text" 
@@ -49,12 +37,7 @@
               
               <div class="form-group">
                 <label class="form-label">Reference *</label>
-                <!-- <input 
-                  v-model="form.reference"
-                  type="text" 
-                  required
-                  class="form-input"
-                > -->
+                
                 <input 
                   v-model="form.reference"
                   type="text" 
@@ -99,19 +82,21 @@
                   type="date" 
                   required
                   class="form-input"
+                  :class="{ 'input-error': startDateErrors.length > 0 }"
+                  
+                  @change="clearStartDateErrors"
                 >
+                <div v-if="startDateErrors.length > 0" class="field-errors">
+                  <small v-for="(error, index) in startDateErrors" :key="index" class="error-text">
+                    {{ error }}
+                  </small>
+                </div>
               </div>
             </div>
             
             <div class="form-group">
               <label class="form-label">Description</label>
-              <!-- <textarea 
-                v-model="form.description"
-                rows="3"
-                class="form-textarea"
-                maxlength="500"
-                placeholder="Optional description (max 500 characters)"
-              ></textarea> -->
+                            
               <textarea 
                 v-model="form.description"
                 rows="3"
@@ -272,8 +257,8 @@
               this.nameErrors.length === 0 &&
               this.referenceErrors.length === 0 &&
               this.categoryErrors.length === 0 &&
-             this.startDateErrors.length === 0 &&
-             this.descriptionErrors.length === 0
+              this.startDateErrors.length === 0 &&
+              this.descriptionErrors.length === 0
       }
     },
 
@@ -281,7 +266,7 @@
       // Clean up event listener
       document.removeEventListener('selectionchange', this.handleTextSelection)
     },
-    
+
     mounted() {
       if (this.customer) {
         this.form = { ...this.customer }
@@ -432,8 +417,8 @@
             // Map backend errors to component error arrays
             this.nameErrors = errors.name || []
             this.referenceErrors = errors.reference || []
-            // this.categoryErrors = errors.category_id || []
-            // this.startDateErrors = errors.start_date || []
+            this.categoryErrors = errors.category_id || []
+            this.startDateErrors = errors.start_date || []
             this.descriptionErrors = errors.description || []
           } else {
             console.error('Error saving customer:', error)

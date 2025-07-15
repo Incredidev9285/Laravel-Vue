@@ -47,28 +47,7 @@ class CustomerController extends Controller
      */
     public function store(Request $request)
     {
-        // try {
-        //     $validatedData = $request->validate([
-        //         'name' => 'required|string|max:255',
-        //         'reference' => 'required|string|unique:customers',
-        //         'customer_category_id' => 'required|exists:customer_categories,id',
-        //         'start_date' => 'nullable|date',
-        //         'description' => 'nullable|string',
-        //     ]);
-    
-        //     $customer = Customer::create($validatedData);
-    
-        //     return response()->json([
-        //         'message' => 'Customer created successfully',
-        //         'data' => $customer,
-        //     ], 201);
-    
-        // } catch (\Illuminate\Validation\ValidationException $e) {
-        //     return response()->json([
-        //         'message' => 'Validation failed',
-        //         'errors' => $e->errors()
-        //     ], 422);
-        // }
+        // Validate the request data
         $validated = $request->validate([
             'name' => [
                 'required',
@@ -140,20 +119,7 @@ class CustomerController extends Controller
      */
     public function update(Request $request, Customer $customer)
     {
-        // $validatedData = $request->validate([
-        //     'name' => 'sometimes|required|string|max:255',
-        //     'reference' => 'sometimes|required|string|unique:customers,reference,' . $customer->id,
-        //     'customer_category_id' => 'sometimes|required|exists:customer_categories,id',
-        //     'start_date' => 'nullable|date',
-        //     'description' => 'nullable|string',
-        // ]);
-
-        // $customer->update($validatedData);
-
-        // return response()->json([
-        //     'message' => 'Customer updated successfully',
-        //     'data' => $customer,
-        // ]);
+        // Validate the request data
         $validated = $request->validate([
             'name' => [
                 'required',
@@ -190,6 +156,11 @@ class CustomerController extends Controller
             'reference.max' => 'Customer reference cannot exceed 20 characters.',
             'reference.regex' => 'Customer reference can only contain uppercase letters, numbers, and hyphens.',
             'reference.unique' => 'This customer reference already exists. Please choose a different one.',
+
+            'customer_category_id.required' => 'Customer category is required.',
+            'customer_category_id.exists' => 'Selected category is invalid.',
+            'start_date.required' => 'Start date is required.',
+            'start_date.date' => 'Start date must be a valid date.',
         ]);
 
         // Auto-format the data before updating
