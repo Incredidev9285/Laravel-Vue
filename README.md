@@ -41,7 +41,7 @@ A modern customer management system built with Laravel 11 backend API and Vue.js
 
 1. **Clone the repository**
    ```bash
-   git clone 
+   git clone git@github.com:Incredidev9285/Laravel-Vue.git
    cd customer-management-system
    ```
 
