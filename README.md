@@ -277,7 +277,7 @@ customer-management-system/
 
 2. **Optimize Laravel**:
    ```bash
-   cd laravel-backend
+   cd laravel-api-backend
    php artisan config:cache
    php artisan route:cache
    php artisan view:cache
@@ -307,3 +307,4 @@ customer-management-system/
 
 
 **Built with ❤️ using Laravel 11 and Vue.js 3**
+
